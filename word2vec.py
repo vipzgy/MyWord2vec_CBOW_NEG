@@ -13,7 +13,6 @@ parser.add_argument('-min-count', type=int, default=5)
 parser.add_argument('-neg-count', type=int, default=5)
 parser.add_argument('-batch-size', type=int, default=100)
 parser.add_argument('-emb-dim', type=int, default=100)
-parser.add_argument('-using-hs', action='store_true', default=False)
 
 parser.add_argument('-dir', type=str, default='./data')
 parser.add_argument('-no-cuda', action='store_true')

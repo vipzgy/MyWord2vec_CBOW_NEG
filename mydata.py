@@ -24,6 +24,7 @@ class InputData:
         # 词频率
         self.word_frequency = {}
         # 去重 去低频次 之后单词个数
+
         self.word_count = 0
         self.input_file = open(os.path.join(self.args.dir, file_name), encoding='utf-8').readlines()
 
@@ -89,6 +90,7 @@ class InputData:
                             continue
                         elif j >= max(0, i - self.args.window_size + 1) and j <= min(len(word_ids), i + self.args.window_size-1):
                             contentw.append(v)
+                    #print(contentw)
                     if len(contentw) == 0:
                         continue
                     self.word_pair_catch.append((contentw, u))
@@ -97,13 +99,15 @@ class InputData:
             batch_pairs.append(self.word_pair_catch.popleft())
         return batch_pairs
 
-# vip ???negative sampling
+# vip negative sampling
     def get_pairs_by_neg_sampling(self, pos_word_pair):
         neg_word_pair = []
 
         for pair in pos_word_pair:
             neg_v = numpy.random.choice(self.sample_table, size=self.args.neg_count)
-            neg_word_pair += zip([pair[0]] * self.args.neg_count, neg_v)
+            neg_v = neg_v.tolist()
+            neg_word_pair += zip([
+                                     pair[0]] * self.args.neg_count, neg_v)
         return pos_word_pair, neg_word_pair
 
 # doubt

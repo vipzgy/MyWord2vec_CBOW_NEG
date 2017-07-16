@@ -23,41 +23,53 @@ class SkipGramModel(nn.Module):
         self.v_embedding.weight.data.uniform_(-0, 0)
 
     def forward(self, pos_u, pos_v, neg_u, neg_v):
-        loss = []
-
-        for idx, pi in enumerate(pos_u):
-            j = self.u_embedding(Variable(torch.LongTensor(pi)))
-            combine = torch.t(torch.sum(torch.t(j), 1))
-            if idx == 0:
-                emb_u = combine
-            else:
-                emb_u = torch.cat((emb_u, combine), 0)
-        emb_v = self.v_embedding(Variable(torch.LongTensor(pos_v)))
+        losses = []
+        emb_u = []
+        for i in range(len(pos_u)):
+            emb_v_v = self.u_embedding(Variable(torch.LongTensor(pos_u[i])))
+            emb_v_v_numpy = emb_v_v.data.numpy()
+            emb_v_v_numpy = numpy.sum(emb_v_v_numpy, axis=0)
+            emb_v_v_list = emb_v_v_numpy.tolist()
+            emb_u.append(emb_v_v_list)
+        emb_u = Variable(torch.FloatTensor(emb_u))
+        emb_v = self.u_embedding(Variable(torch.LongTensor(pos_v)))
         score = torch.mul(emb_u, emb_v)
-        score = torch.sum(score, 1)
+        score = torch.sum(score, dim=1)
         score = F.logsigmoid(score)
-        loss.append(sum(score))
+        losses.append(sum(score))
 
-        for idx, ni in enumerate(neg_u):
-            j = self.u_embedding(Variable(torch.LongTensor(ni)))
-            combine = torch.t(torch.sum(torch.t(j), 1))
-            if idx == 0:
-                neg_emb_u = combine
-            else:
-                neg_emb_u = torch.cat((neg_emb_u, combine), 0)
+        neg_emb_u = []
+        for i in range(len(neg_u)):
+            neg_emb_v_v = self.u_embedding(Variable(torch.LongTensor(neg_u[i])))
+            neg_emb_v_v_numpy = neg_emb_v_v.data.numpy()
+            neg_emb_v_v_numpy = numpy.sum(neg_emb_v_v_numpy, axis=0)
+            neg_emb_v_v_list = neg_emb_v_v_numpy.tolist()
+            neg_emb_u.append(neg_emb_v_v_list)
+        neg_emb_u = Variable(torch.FloatTensor(neg_emb_u))
 
-        neg_emb_v = self.v_embedding(Variable(torch.from_numpy(numpy.array(neg_v)).type(torch.LongTensor)))
+        neg_emb_v = self.u_embedding(Variable(torch.LongTensor(neg_v)))
         neg_score = torch.mul(neg_emb_u, neg_emb_v)
-        neg_score = torch.sum(neg_score, 1)
+        neg_score = torch.sum(neg_score, dim=1)
         neg_score = F.logsigmoid(-1 * neg_score)
-        loss.append(sum(neg_score))
+        losses.append(sum(neg_score))
+        return -1 * sum(losses)
 
-        return -1 * sum(loss)
 
     def save_embedding(self, id2word, file_name):
-        # 输出的是u的
+        # 输出的是v的
         embedding = self.v_embedding.weight.data.numpy()
-        output = open(os.path.join(self.args.dir, file_name), 'w', encoding='utf-8')
+        output = open(os.path.join(self.args.dir, 'v'), 'w', encoding='utf-8')
+        output.write('%d %d\n' % (len(id2word), self.args.emb_dim))
+        output.flush()
+        for wid, w in id2word.items():
+            e = embedding[wid]
+            e = ' '.join(map(lambda x: str(x), e))
+            output.write('%s %s\n' % (w, e))
+            output.flush()
+        output.close()
+
+        embedding = self.u_embedding.weight.data.numpy()
+        output = open(os.path.join(self.args.dir, 'cbow-neg1'), 'w', encoding='utf-8')
         output.write('%d %d\n' % (len(id2word), self.args.emb_dim))
         output.flush()
         for wid, w in id2word.items():
